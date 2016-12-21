@@ -12,7 +12,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include <hal/time.h>
+#include "hal/storage.h"
+#include "hal/time.h"
 #include "knot_thing_config.h"
 #include "knot_types.h"
 #include "knot_thing_main.h"
@@ -46,6 +47,12 @@ static struct _data_items {
 	// Data read/write functions
 	knot_data_functions	functions;
 } data_items[KNOT_THING_DATA_MAX];
+
+static	struct data_config_store{
+	uint8_t			sensor_id;
+	knot_config		config;
+} data_config_store[KNOT_THING_DATA_MAX];
+
 
 static struct _data_items *find_item(uint8_t id)
 {
@@ -222,6 +229,11 @@ int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
 {
 	struct _data_items *item = find_item(id);
 
+	uint16_t i;
+	ssize_t config_len;
+	size_t data_config_store_len = sizeof(data_config_store);
+	uint8_t number_of_configs;
+
 	/* FIXME: Check if config is valid */
 	if (!item)
 		return -1;
@@ -240,7 +252,43 @@ int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
 	if (upper)
 		memcpy(&(item->config.upper_limit), upper, sizeof(*upper));
 
-	// TODO: store flags and limits on persistent storage
+	/* Verification if there is something already stored in the EEPROM */
+	config_len = hal_storage_read_end(HAL_STORAGE_ID_CONFIG,
+						(void *) data_config_store,
+						data_config_store_len);
+
+	if (config_len < 0)
+		return -1;
+
+	number_of_configs = config_len / CONFIG_SIZE_UNITY;
+
+	/*Store flags and limits on persistent storage*/
+	for (i = 0 ; i < (number_of_configs) ; i++) {
+		if (data_config_store[i].sensor_id == id) {
+			memcpy(&data_config_store[i].config,
+					&item->config,
+					sizeof(item->config));
+			hal_storage_write_end(HAL_STORAGE_ID_CONFIG,
+						(void *) data_config_store,
+						data_config_store_len);
+
+			break;
+		}
+	}/* If the config is not stored in the EEPROM, here it is added */
+	if (i == (number_of_configs)) {
+		if ((number_of_configs) < KNOT_THING_DATA_MAX) {
+			memcpy(&data_config_store[number_of_configs].config,
+					&item->config,
+					sizeof(item->config));
+			data_config_store[number_of_configs].sensor_id = id;
+			hal_storage_write_end(HAL_STORAGE_ID_CONFIG,
+						(void *) data_config_store,
+						data_config_store_len);
+
+		} else {
+			return -1;
+		}
+	}
 
 	return 0;
 }
