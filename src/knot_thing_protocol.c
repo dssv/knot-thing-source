@@ -91,6 +91,10 @@ int knot_thing_protocol_init(const char *thing_name, data_function read,
 
 	hal_gpio_pin_mode(CLEAR_EEPROM_PIN, INPUT_PULLUP);
 
+	/*
+	 * FIXME: If mac address invalid, reset EEPROM
+	 */
+
 	/* Set mac address */
 	set_nrf24MAC();
 
