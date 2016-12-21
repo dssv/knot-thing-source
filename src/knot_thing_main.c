@@ -133,6 +133,9 @@ int8_t knot_thing_register_data_item(uint8_t sensor_id, const char *name,
 	uint16_t type_id, uint8_t value_type, uint8_t unit,
 	knot_data_functions *func)
 {
+	uint16_t i;
+	ssize_t config_len;
+	size_t data_config_store_len = sizeof(data_config_store);
 
 	if (sensor_id >= KNOT_THING_DATA_MAX || (item_is_unregistered(sensor_id) != 0) ||
 		(knot_schema_is_valid(type_id, value_type, unit) != 0) ||
@@ -143,25 +146,54 @@ int8_t knot_thing_register_data_item(uint8_t sensor_id, const char *name,
 	data_items[sensor_id].type_id					= type_id;
 	data_items[sensor_id].unit					= unit;
 	data_items[sensor_id].value_type				= value_type;
-	// TODO: load flags and limits from persistent storage
-	/* Remove KNOT_EVT_FLAG_UNREGISTERED flag */
-	data_items[sensor_id].config.event_flags			= KNOT_EVT_FLAG_NONE;
+
+	/* As "functions" is a union, we need just to set only one of its members */
+	data_items[sensor_id].functions.int_f.read			= func->int_f.read;
+	data_items[sensor_id].functions.int_f.write			= func->int_f.write;
 	/* As "last_data" is a union, we need just to set the "biggest" member */
 	data_items[sensor_id].last_data.val_f.multiplier		= 1;
 	data_items[sensor_id].last_data.val_f.value_int			= 0;
 	data_items[sensor_id].last_data.val_f.value_dec			= 0;
-	/* As "lower_limit" is a union, we need just to set the "biggest" member */
-	data_items[sensor_id].config.lower_limit.val_f.multiplier	= 1;
-	data_items[sensor_id].config.lower_limit.val_f.value_int	= 0;
-	data_items[sensor_id].config.lower_limit.val_f.value_dec	= 0;
-	/* As "upper_limit" is a union, we need just to set the "biggest" member */
-	data_items[sensor_id].config.upper_limit.val_f.multiplier	= 1;
-	data_items[sensor_id].config.upper_limit.val_f.value_int	= 0;
-	data_items[sensor_id].config.upper_limit.val_f.value_dec	= 0;
+
 	data_items[sensor_id].last_value_raw				= NULL;
-	/* As "functions" is a union, we need just to set only one of its members */
-	data_items[sensor_id].functions.int_f.read			= func->int_f.read;
-	data_items[sensor_id].functions.int_f.write			= func->int_f.write;
+
+	config_len = hal_storage_read_end(HAL_STORAGE_ID_CONFIG,
+						(void *) data_config_store,
+						data_config_store_len);
+
+	if (config_len < 0)
+		return -1;
+
+	for (i = 0 ; i < (config_len / CONFIG_SIZE_UNITY) ; i++) {
+		if (data_config_store[i].sensor_id == sensor_id) {
+
+			data_items[sensor_id].config.event_flags			= data_config_store[i].config.event_flags;
+			/* As "lower_limit" is a union, we need just to set the "biggest" member */
+			data_items[sensor_id].config.lower_limit.val_f.multiplier	= data_config_store[i].config.lower_limit.val_f.multiplier;
+			data_items[sensor_id].config.lower_limit.val_f.value_int	= data_config_store[i].config.lower_limit.val_f.value_int;
+			data_items[sensor_id].config.lower_limit.val_f.value_dec	= data_config_store[i].config.lower_limit.val_f.value_dec;
+			/* As "upper_limit" is a union, we need just to set the "biggest" member */
+			data_items[sensor_id].config.upper_limit.val_f.multiplier	= data_config_store[i].config.upper_limit.val_f.multiplier;
+			data_items[sensor_id].config.upper_limit.val_f.value_int	= data_config_store[i].config.upper_limit.val_f.value_int;
+			data_items[sensor_id].config.upper_limit.val_f.value_dec	= data_config_store[i].config.upper_limit.val_f.value_dec;
+
+			break;
+		}
+	}
+
+	if (i == (config_len / CONFIG_SIZE_UNITY)) {
+
+		/* Remove KNOT_EVT_FLAG_UNREGISTERED flag */
+		data_items[sensor_id].config.event_flags			= KNOT_EVT_FLAG_NONE;
+		/* As "lower_limit" is a union, we need just to set the "biggest" member */
+		data_items[sensor_id].config.lower_limit.val_f.multiplier	= 1;
+		data_items[sensor_id].config.lower_limit.val_f.value_int	= 0;
+		data_items[sensor_id].config.lower_limit.val_f.value_dec	= 0;
+		/* As "upper_limit" is a union, we need just to set the "biggest" member */
+		data_items[sensor_id].config.upper_limit.val_f.multiplier	= 1;
+		data_items[sensor_id].config.upper_limit.val_f.value_int	= 0;
+		data_items[sensor_id].config.upper_limit.val_f.value_dec	= 0;
+	}
 
 	if (sensor_id > max_sensor_id)
 		max_sensor_id = sensor_id;
