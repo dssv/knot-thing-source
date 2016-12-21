@@ -156,6 +156,10 @@ int8_t knot_thing_register_data_item(uint8_t id, const char *name,
 	struct _data_items *item;
 	uint8_t index;
 
+	uint16_t i;
+	ssize_t config_len;
+	size_t data_config_store_len = sizeof(data_config_store);
+
 	for (index = 0, item = NULL; index < KNOT_THING_DATA_MAX; index++) {
 		if (data_items[index].id == 0) {
 			item = &data_items[index];
@@ -173,27 +177,61 @@ int8_t knot_thing_register_data_item(uint8_t id, const char *name,
 	item->type_id					= type_id;
 	item->unit					= unit;
 	item->value_type				= value_type;
-	// TODO: load flags and limits from persistent storage
-	/* Remove KNOT_EVT_FLAG_UNREGISTERED flag */
-	item->config.event_flags			= KNOT_EVT_FLAG_NONE;
 	/* As "last_data" is a union, we need just to set the "biggest" member */
 	item->last_data.val_f.multiplier		= 1;
 	item->last_data.val_f.value_int			= 0;
 	item->last_data.val_f.value_dec			= 0;
-	/* As "lower_limit" is a union, we need just to set the "biggest" member */
-	item->config.lower_limit.val_f.multiplier	= 1;
-	item->config.lower_limit.val_f.value_int	= 0;
-	item->config.lower_limit.val_f.value_dec	= 0;
-	/* As "upper_limit" is a union, we need just to set the "biggest" member */
-	item->config.upper_limit.val_f.multiplier	= 1;
-	item->config.upper_limit.val_f.value_int	= 0;
-	item->config.upper_limit.val_f.value_dec	= 0;
 	item->last_value_raw				= NULL;
 	/* As "functions" is a union, we need just to set only one of its members */
 	item->functions.int_f.read			= func->int_f.read;
 	item->functions.int_f.write			= func->int_f.write;
 	/* Starting last_timeout with the current time */
 	item->last_timeout 				= hal_time_ms();
+
+	config_len = hal_storage_read_end(HAL_STORAGE_ID_CONFIG,
+						(void *) data_config_store,
+						data_config_store_len);
+
+	if (config_len < 0)
+		return -1;
+
+	/* Load flags and limits from persistent storage.
+	 * First is checked if the sensor is already stored in the EEPROM, the
+	 * data_config_store is traversed searching for the id.
+	 */
+	for (i = 0 ; i < (config_len / CONFIG_SIZE_UNITY) ; i++) {
+		if (data_config_store[i].sensor_id == id) {
+
+			/* Remove KNOT_EVT_FLAG_UNREGISTERED flag */
+			item->config.event_flags			= data_config_store[i].config.event_flags;
+			/* As "lower_limit" is a union, we need just to set the "biggest" member */
+			item->config.lower_limit.val_f.multiplier	= data_config_store[i].config.lower_limit.val_f.multiplier;
+			item->config.lower_limit.val_f.value_int	= data_config_store[i].config.lower_limit.val_f.value_int;
+			item->config.lower_limit.val_f.value_dec	= data_config_store[i].config.lower_limit.val_f.value_dec;
+			/* As "upper_limit" is a union, we need just to set the "biggest" member */
+			item->config.upper_limit.val_f.multiplier	= data_config_store[i].config.upper_limit.val_f.multiplier;
+			item->config.upper_limit.val_f.value_int	= data_config_store[i].config.upper_limit.val_f.value_int;
+			item->config.upper_limit.val_f.value_dec	= data_config_store[i].config.upper_limit.val_f.value_dec;
+
+			break;
+		}
+	}
+
+	/* If id is not found in EEPROM, the data is setted with default. */
+	if (i == (config_len / CONFIG_SIZE_UNITY)) {
+
+		/* Remove KNOT_EVT_FLAG_UNREGISTERED flag */
+		item->config.event_flags			= KNOT_EVT_FLAG_CHANGE;
+		/* As "lower_limit" is a union, we need just to set the "biggest" member */
+		item->config.lower_limit.val_f.multiplier	= 1;
+		item->config.lower_limit.val_f.value_int	= 0;
+		item->config.lower_limit.val_f.value_dec	= 0;
+		/* As "upper_limit" is a union, we need just to set the "biggest" member */
+		item->config.upper_limit.val_f.multiplier	= 1;
+		item->config.upper_limit.val_f.value_int	= 0;
+		item->config.upper_limit.val_f.value_dec	= 0;
+	}
+
 	return 0;
 }
 
