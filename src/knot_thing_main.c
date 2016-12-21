@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include "include/storage.h"
 #include "include/time.h"
 #include "knot_thing_config.h"
 #include "knot_types.h"
@@ -47,6 +48,11 @@ static struct _data_items{
 	// Data read/write functions
 	knot_data_functions	functions;
 } data_items[KNOT_THING_DATA_MAX];
+
+static	struct data_config_store{
+	uint8_t			sensor_id;
+	knot_config		config;
+} data_config_store[KNOT_THING_DATA_MAX];
 
 static void reset_data_items(void)
 {
@@ -169,6 +175,10 @@ int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
 							knot_value_types *lower,
 							knot_value_types *upper)
 {
+	uint16_t i;
+	ssize_t config_len;
+	size_t data_config_store_len = sizeof(data_config_store);
+
 	/*FIXME: Check if config is valid */
 	if ((id >= KNOT_THING_DATA_MAX) || item_is_unregistered(id) == 0)
 		return -1;
@@ -189,7 +199,41 @@ int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
 		memcpy(&(data_items[id].config.upper_limit), upper,
 							sizeof(*upper));
 
-	// TODO: store flags and limits on persistent storage
+	/* Verification if there is something already stored in the EEPROM */
+	config_len = hal_storage_read_end(HAL_STORAGE_ID_CONFIG,
+						(void *) data_config_store,
+						data_config_store_len);
+
+	if (config_len < 0)
+		return -1;
+
+	/*Store flags and limits on persistent storage*/
+	for (i = 0 ; i < (config_len / CONFIG_SIZE_UNITY) ; i++) {
+		if (data_config_store[i].sensor_id == id) {
+			memcpy(&data_config_store[i].config,
+					&data_items[id].config,
+					sizeof(data_items[id].config));
+			hal_storage_write_end(HAL_STORAGE_ID_CONFIG,
+						(void *) data_config_store,
+							data_config_store_len);
+
+			break;
+		}
+	}
+	if (i == (config_len / CONFIG_SIZE_UNITY)) {
+		if ((config_len / CONFIG_SIZE_UNITY) < 5) {
+			memcpy(&data_config_store[(config_len/CONFIG_SIZE_UNITY)].config,
+					&data_items[id].config,
+					sizeof(data_items[id].config));
+			data_config_store[(config_len/CONFIG_SIZE_UNITY)].sensor_id = id;
+			hal_storage_write_end(HAL_STORAGE_ID_CONFIG,
+						(void *) data_config_store,
+						data_config_store_len + CONFIG_SIZE_UNITY);
+
+		} else {
+			return -1;
+		}
+	}
 
 	return 0;
 }
