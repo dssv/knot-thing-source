@@ -16,20 +16,14 @@ extern "C" {
 
 #include "knot_thing_protocol.h"
 
-typedef int (*intDataFunction)		(int32_t *val, int32_t *multiplier);
-typedef int (*floatDataFunction)	(int32_t *val_int, uint32_t *val_dec, int32_t *multiplier);
+typedef int (*numberDataFunction)	(int32_t *val_int, uint32_t *val_dec, int32_t *multiplier);
 typedef int (*boolDataFunction)		(uint8_t *val);
 typedef int (*rawDataFunction)		(uint8_t *val, uint8_t *len);
 
 typedef struct __attribute__ ((packed)) {
-	intDataFunction read;
-	intDataFunction write;
-} knot_int_functions;
-
-typedef struct __attribute__ ((packed)) {
-	floatDataFunction read;
-	floatDataFunction write;
-} knot_float_functions;
+	numberDataFunction read;
+	numberDataFunction write;
+} knot_number_functions;
 
 typedef struct __attribute__ ((packed)) {
 	boolDataFunction read;
@@ -42,8 +36,7 @@ typedef struct __attribute__ ((packed)) {
 } knot_raw_functions;
 
 typedef union __attribute__ ((packed)) {
-	knot_int_functions	int_f;
-	knot_float_functions	float_f;
+	knot_number_functions	number_f;
 	knot_bool_functions	bool_f;
 	knot_raw_functions	raw_f;
 } knot_data_functions;

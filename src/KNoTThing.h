@@ -26,13 +26,9 @@ public:
 	 */
 	int init(const char *thing_name);
 
-	int registerIntData(const char *name, uint8_t sensor_id,
+	int registerNumberData(const char *name, uint8_t sensor_id,
 			uint16_t type_id, uint8_t unit,
-			intDataFunction read, intDataFunction write);
-
-	int registerFloatData(const char *name, uint8_t sensor_id,
-			uint16_t type_id, uint8_t unit,
-			floatDataFunction read, floatDataFunction write);
+			numberDataFunction read, numberDataFunction write);
 
 	int registerBoolData(const char *name, uint8_t sensor_id,
 			uint16_t type_id, uint8_t unit,

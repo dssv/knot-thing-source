@@ -21,6 +21,7 @@
 
 // TODO: normalize all returning error codes
 
+
 const char KNOT_THING_EMPTY_ITEM[] PROGMEM = { "EMPTY ITEM" };
 
 static uint8_t last_id; /* Last registered id */
@@ -29,6 +30,7 @@ static uint8_t evt_sensor_id;
 /* Control the upper lower mensage flow */
 static uint8_t lower_flag[KNOT_THING_DATA_MAX];
 static uint8_t upper_flag[KNOT_THING_DATA_MAX];
+
 
 static struct _data_items{
 	uint8_t			id;		// KNOT_ID
@@ -82,24 +84,25 @@ static void reset_data_items(void)
 		pdata->config.event_flags			= KNOT_EVT_FLAG_UNREGISTERED;
 		pdata->config.notify_flags			= KNOT_EVT_FLAG_UNREGISTERED;
 		/* As "last_data" is a union, we need just to set the "biggest" member*/
-		pdata->last_data.val_f.multiplier		= 1;
-		pdata->last_data.val_f.value_int		= 0;
-		pdata->last_data.val_f.value_dec		= 0;
+		pdata->last_data.val_n.multiplier		= 1;
+		pdata->last_data.val_n.value_int		= 0;
+		pdata->last_data.val_n.value_dec		= 0;
 		/* As "lower_limit" is a union, we need just to set the "biggest" member */
-		pdata->config.lower_limit.val_f.multiplier	= 1;
-		pdata->config.lower_limit.val_f.value_int	= 0;
-		pdata->config.lower_limit.val_f.value_dec	= 0;
+		pdata->config.lower_limit.val_n.multiplier	= 1;
+		pdata->config.lower_limit.val_n.value_int	= 0;
+		pdata->config.lower_limit.val_n.value_dec	= 0;
 		/* As "upper_limit" is a union, we need just to set the "biggest" member */
-		pdata->config.upper_limit.val_f.multiplier	= 1;
-		pdata->config.upper_limit.val_f.value_int	= 0;
-		pdata->config.upper_limit.val_f.value_dec	= 0;
+		pdata->config.upper_limit.val_n.multiplier	= 1;
+		pdata->config.upper_limit.val_n.value_int	= 0;
+		pdata->config.upper_limit.val_n.value_dec	= 0;
 		pdata->last_value_raw				= NULL;
 		/* As "functions" is a union, we need just to set only one of its members */
-		pdata->functions.int_f.read			= NULL;
-		pdata->functions.int_f.write			= NULL;
+		pdata->functions.number_f.read			= NULL;
+		pdata->functions.number_f.write			= NULL;
 
 		lower_flag[count] = 0;
 		upper_flag[count] = 0;
+
 	}
 }
 
@@ -108,7 +111,7 @@ static int data_function_is_valid(knot_data_functions *func)
 	if (func == NULL)
 		return -1;
 
-	if (func->int_f.read == NULL && func->int_f.write == NULL)
+	if (func->number_f.read == NULL && func->number_f.write == NULL)
 		return -1;
 
 	return 0;
@@ -361,29 +364,17 @@ static int data_item_read(uint8_t id, knot_msg_data *data)
 		data->payload.values.val_b = uint8_val;
 		data->hdr.payload_len = len;
 		break;
-	case KNOT_VALUE_TYPE_INT:
-		if (data_items[pos_id].functions.int_f.read == NULL)
+	case KNOT_VALUE_TYPE_NUMBER:
+		if (data_items[pos_id].functions.number_f.read == NULL)
 			return -1;
 
-		if (data_items[pos_id].functions.int_f.read(&int32_val, &multiplier) < 0)
+		if (data_items[pos_id].functions.number_f.read(&int32_val, &uint32_val, &multiplier) < 0)
 			return -1;
 
-		len = sizeof(data->payload.values.val_i);
-		data->payload.values.val_i.value = int32_val;
-		data->payload.values.val_i.multiplier = multiplier;
-		data->hdr.payload_len = len;
-		break;
-	case KNOT_VALUE_TYPE_FLOAT:
-		if (data_items[pos_id].functions.float_f.read == NULL)
-			return -1;
-
-		if (data_items[pos_id].functions.float_f.read(&int32_val, &uint32_val, &multiplier) < 0)
-			return -1;
-
-		len = sizeof(data->payload.values.val_f);
-		data->payload.values.val_f.value_int = int32_val;
-		data->payload.values.val_f.value_dec = uint32_val;
-		data->payload.values.val_f.multiplier = multiplier;
+		len = sizeof(data->payload.values.val_n);
+		data->payload.values.val_n.value_int = int32_val;
+		data->payload.values.val_n.value_dec = uint32_val;
+		data->payload.values.val_n.multiplier = multiplier;
 		data->hdr.payload_len = len;
 		break;
 	default:
@@ -425,22 +416,14 @@ static int data_item_write(uint8_t id, knot_msg_data *data)
 		ret_val = data_items[pos_id].functions.bool_f.write(
 					&data->payload.values.val_b);
 		break;
-	case KNOT_VALUE_TYPE_INT:
-		if (data_items[pos_id].functions.int_f.write == NULL)
+	case KNOT_VALUE_TYPE_NUMBER:
+		if (data_items[pos_id].functions.number_f.write == NULL)
 			goto done;
 
-		ret_val = data_items[pos_id].functions.int_f.write(
-					&data->payload.values.val_i.value,
-					&data->payload.values.val_i.multiplier);
-		break;
-	case KNOT_VALUE_TYPE_FLOAT:
-		if (data_items[pos_id].functions.float_f.write == NULL)
-			goto done;
-
-		ret_val = data_items[pos_id].functions.float_f.write(
-					&data->payload.values.val_f.value_int,
-					&data->payload.values.val_f.value_dec,
-					&data->payload.values.val_f.multiplier);
+		ret_val = data_items[pos_id].functions.number_f.write(
+					&data->payload.values.val_n.value_int,
+					&data->payload.values.val_n.value_dec,
+					&data->payload.values.val_n.multiplier);
 		break;
 	default:
 		break;
@@ -501,51 +484,28 @@ static int verify_events(knot_msg_data *data)
 			data_items[evt_sensor_id].last_data.val_b = data->payload.values.val_b;
 		}
 		break;
-	case KNOT_VALUE_TYPE_INT:
-		// TODO: add multiplier to comparison
-		if (data->payload.values.val_i.value < data_items[evt_sensor_id].config.lower_limit.val_i.value && lower_flag[evt_sensor_id] == 0) {
-			comparison |= (KNOT_EVT_FLAG_LOWER_THRESHOLD & data_items[evt_sensor_id].config.event_flags);
-			upper_flag[evt_sensor_id] = 0;
-			lower_flag[evt_sensor_id] = 1;
-		} else if (data->payload.values.val_i.value > data_items[evt_sensor_id].config.upper_limit.val_i.value && upper_flag[evt_sensor_id] == 0) {
-			comparison |= (KNOT_EVT_FLAG_UPPER_THRESHOLD & data_items[evt_sensor_id].config.event_flags);
-			upper_flag[evt_sensor_id] = 1;
-			lower_flag[evt_sensor_id] = 0;
-		} else {
-			if (data->payload.values.val_i.value < data_items[evt_sensor_id].config.upper_limit.val_i.value)
-				upper_flag[evt_sensor_id] = 0;
-			if (data->payload.values.val_i.value > data_items[evt_sensor_id].config.lower_limit.val_i.value)
-				lower_flag[evt_sensor_id] = 0;
-		}
-
-		if (data->payload.values.val_i.value != data_items[evt_sensor_id].last_data.val_i.value)
-			comparison |= (KNOT_EVT_FLAG_CHANGE & data_items[evt_sensor_id].config.event_flags);
-
-		data_items[evt_sensor_id].last_data.val_i.value = data->payload.values.val_i.value;
-		data_items[evt_sensor_id].last_data.val_i.multiplier = data->payload.values.val_i.multiplier;
-		break;
-	case KNOT_VALUE_TYPE_FLOAT:
+	case KNOT_VALUE_TYPE_NUMBER:
 		// TODO: add multiplier and decimal part to comparison
-		if (data->payload.values.val_f.value_int < data_items[evt_sensor_id].config.lower_limit.val_f.value_int && lower_flag[evt_sensor_id] == 0) {
+		if (data->payload.values.val_n.value_int < data_items[evt_sensor_id].config.lower_limit.val_n.value_int && lower_flag[evt_sensor_id] == 0) {
 			comparison |= (KNOT_EVT_FLAG_LOWER_THRESHOLD & data_items[evt_sensor_id].config.event_flags);
 			upper_flag[evt_sensor_id] = 0;
 			lower_flag[evt_sensor_id] = 1;
-		} else if (data->payload.values.val_f.value_int > data_items[evt_sensor_id].config.upper_limit.val_f.value_int && upper_flag[evt_sensor_id] == 0) {
+		} else if (data->payload.values.val_n.value_int > data_items[evt_sensor_id].config.upper_limit.val_n.value_int && upper_flag[evt_sensor_id] == 0) {
 			comparison |= (KNOT_EVT_FLAG_UPPER_THRESHOLD & data_items[evt_sensor_id].config.event_flags);
 			upper_flag[evt_sensor_id] = 1;
 			lower_flag[evt_sensor_id] = 0;
 		} else {
-			if (data->payload.values.val_i.value < data_items[evt_sensor_id].config.upper_limit.val_i.value)
+			if (data->payload.values.val_n.value_int < data_items[evt_sensor_id].config.upper_limit.val_n.value_int)
 				upper_flag[evt_sensor_id] = 0;
-			if (data->payload.values.val_i.value > data_items[evt_sensor_id].config.lower_limit.val_i.value)
+			if (data->payload.values.val_n.value_int > data_items[evt_sensor_id].config.lower_limit.val_n.value_int)
 				lower_flag[evt_sensor_id] = 0;
 		}
-		if (data->payload.values.val_f.value_int != data_items[evt_sensor_id].last_data.val_f.value_int)
+		if (data->payload.values.val_n.value_int != data_items[evt_sensor_id].last_data.val_n.value_int)
 			comparison |= (KNOT_EVT_FLAG_CHANGE & data_items[evt_sensor_id].config.event_flags);
 
-		data_items[evt_sensor_id].last_data.val_f.value_int = data->payload.values.val_f.value_int;
-		data_items[evt_sensor_id].last_data.val_f.value_dec = data->payload.values.val_f.value_dec;
-		data_items[evt_sensor_id].last_data.val_f.multiplier = data->payload.values.val_f.multiplier;
+		data_items[evt_sensor_id].last_data.val_n.value_int = data->payload.values.val_n.value_int;
+		data_items[evt_sensor_id].last_data.val_n.value_dec = data->payload.values.val_n.value_dec;
+		data_items[evt_sensor_id].last_data.val_n.multiplier = data->payload.values.val_n.multiplier;
 		break;
 	default:
 		// This data item is not registered with a valid value type
