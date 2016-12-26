@@ -26,28 +26,16 @@ int KNoTThing::init(const char *thing_name)
 	return knot_thing_init(thing_name);
 }
 
-int KNoTThing::registerIntData(const char *name, uint8_t sensor_id,
+int KNoTThing::registerNumberData(const char *name, uint8_t sensor_id,
 				uint16_t type_id, uint8_t unit,
-				intDataFunction read, intDataFunction write)
+				numberDataFunction read, numberDataFunction write)
 {
 	knot_data_functions func;
-	func.int_f.read = read;
-	func.int_f.write = write;
+	func.number_f.read = read;
+	func.number_f.write = write;
 
 	return knot_thing_register_data_item(sensor_id, name, type_id,
-					KNOT_VALUE_TYPE_INT, unit, &func);
-}
-
-int KNoTThing::registerFloatData(const char *name, uint8_t sensor_id,
-				uint16_t type_id, uint8_t unit,
-				floatDataFunction read, floatDataFunction write)
-{
-	knot_data_functions func;
-	func.float_f.read = read;
-	func.float_f.write = write;
-
-	return knot_thing_register_data_item(sensor_id, name, type_id,
-					KNOT_VALUE_TYPE_FLOAT, unit, &func);
+					KNOT_VALUE_TYPE_NUMBER, unit, &func);
 
 }
 
