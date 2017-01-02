@@ -208,11 +208,17 @@ int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
 							knot_value_types *lower,
 							knot_value_types *upper)
 {
+	int config_is_valid;
 	uint16_t i;
 	ssize_t config_len;
 	size_t data_config_store_len = sizeof(data_config_store);
 
-	/*FIXME: Check if config is valid */
+	/*Check if config is valid */
+	config_is_valid = knot_config_is_valid(evflags, time_sec, lower, upper);
+
+	if (config_is_valid < 0)
+		return config_is_valid;
+
 	if ((id >= KNOT_THING_DATA_MAX) || item_is_unregistered(id) == 0)
 		return -1;
 
