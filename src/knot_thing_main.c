@@ -193,10 +193,19 @@ int8_t knot_thing_register_data_item(uint8_t sensor_id, const char *name,
 int knot_thing_config_data_item(uint8_t sensor_id, uint8_t event_flags,
 	uint16_t time_sec, knot_value_types *lower_limit, knot_value_types *upper_limit)
 {
+	int config_is_valid;
 	uint16_t i, config_len;
 	size_t data_config_store_len = sizeof(data_config_store);
 
-	/*FIXME: Check if config is valid */
+	/*Check if config is valid */
+	config_is_valid = knot_config_is_valid(event_flags,
+						time_sec,
+						&lower_limit,
+						&upper_limit);
+
+	if (config_is_valid < 0)
+		return config_is_valid;
+
 	if ((sensor_id >= KNOT_THING_DATA_MAX) || item_is_unregistered(sensor_id) == 0)
 		return -1;
 
