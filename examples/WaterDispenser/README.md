@@ -1,26 +1,40 @@
-[<img src="http://knot.cesar.org.br/images/KNoT_logo_topo1.png" height="80">] (http://knot.cesar.org.br/) KNoT Network of Things
+<img src="https://static.wixstatic.com/media/c9c95d_141fd3ce48914003b1c14521a48adeb3~mv2.png/v1/fill/w_100,h_106,al_c/c9c95d_141fd3ce48914003b1c14521a48adeb3~mv2.png" height="80"> KNoT Network of Things
 =============================================================================
 
-#### _Scale Application Documentation_
+#### _Water Dispenser Application_
 
-This tutorial explains how to hack a weight scale, model EB9322 of Camry Scales
-® using a converter (ADC) for weight scales HX711.
+This example shows how to use a weight scale with the KNoT Thing Board to
+monitor a water dispenser.
 
-Weight Scale Specifications
+The application will send notifications in an interval of 30 minutes.
+
+##### REQUIREMENTS:
+
+* Weight Scale
+* Water Dispenser
+* HX711 Converter
+* HX711 Library
+* Water Dispenser Application
+* KNoT Library
+* KNoT Thing Board
+* Push Button
+
+##### Weight Scale Specifications
 ----------------
 
-* Product Name: HEAVY DUTY GLASS SCALES
-* Producer: Camry Scales
-* Model: EB9322
+* Product Name: **HEAVY DUTY GLASS SCALES**
+* Producer: **Camry Scales**
+* Model: **EB9322**
 
 <img src="http://www.camryscale.com/showroom/photo/eb9322-b.jpg" height="200">
 
-Link for more details: [EB9322](http://www.camryscale.com/showroom/eb9322.html)
+Link for more details:
+[EB9322](http://www.camryscale.com/showroom/eb9322.html)
 
-Similar model used in the application: [EB9321]
-(http://www.camryscale.com/showroom/eb9321.html)
+Similar model used in the application:
+[EB9321](http://www.camryscale.com/showroom/eb9321.html)
 
-24-Bit Analog-to-Digital Converter (ADC) for Weigh Scales - HX711
+##### HX711
 ----------------
 
 HX711 is a precision 24-bit analog-to-digital converter (ADC) designed for
@@ -30,7 +44,7 @@ bridge sensor.
 Link to the datasheet with more details about the board used:
 [Datasheet](docs/Datasheet_HX711.pdf)
 
-HX711 Library
+##### HX711 Library
 ----------------
 
 An Arduino library to interface the Avia Semiconductor HX711 24-Bit
@@ -43,20 +57,21 @@ To use the HX711 lib correctly with this application, follow the instruction:
 $wget --output-document="$HOME/Arduino/libraries/HX711.zip" https://github.com/bogde/HX711/archive/master.zip && cd $HOME/Arduino/libraries/ && unzip HX711.zip
 ```
 
-OBS: If the Arduino folder isn't in the default directory you must change the
-command to point to the correct directory.
+OBS: If the Arduino folder it is not in the default directory ($HOME) you must
+change to the correct directory.
 
 Link to lib: [Git](https://github.com/bogde/HX711)
 
-How to hack the Weight Scale
+##### USAGE
+
+##### Hacking the Weight Scale
 ----------------
 
-Opening the back of the balance, you can find the controller board.
-In order to capture the data read by the scale using the pins of the HX711 chip,
-you need to solder the pins of the HX711 with those of the balance controller
-board as follows:
+1) Open the back of weight scale
+2) Find the controller board
+3) Solder the pins of HX711 chip with the scale wieght controller board (figure below)
 
-HX711
+**HX711**
 
 <img src="http://iotdk.intel.com/docs/master/upm/hx711.jpeg" height="">
 
@@ -69,7 +84,7 @@ HX711
 |        A+     |      Input Analogic Positive      |    Middle left up      |
 
 
-PCB EB9360R11
+**PCB EB9360R11**
 
 <img src="http://i.imgur.com/pzT8akx.jpg" height="">
 
@@ -82,9 +97,9 @@ PCB EB9360R11
 |        A+     |             Yellow            |    Middle left up      |
 
 
-Doing this now you are able to read the values and use them in your application.
+**NOTICE:** You are now able to read the values of weight scale.
 
-Water Dispenser Application
+##### Water Dispenser Application
 ----------------
 
 
@@ -157,3 +172,7 @@ if(currentMillis - previousMillis >= READ_INTERVAL){
 ```c++
  *val_int = remove_noise(kg*1000);
 ```
+
+**CONGRATULATIONS:** Now you can monitor the water usage in your water dispenser.
+
+For more information visit our webpage: [KNOT](http://knot.cesar.org.br/)
