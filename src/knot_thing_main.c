@@ -80,6 +80,7 @@ static void reset_data_items(void)
 		pdata->unit					= KNOT_UNIT_NOT_APPLICABLE;
 		pdata->value_type				= KNOT_VALUE_TYPE_INVALID;
 		pdata->config.event_flags			= KNOT_EVT_FLAG_UNREGISTERED;
+		pdata->config.notify_flags			= KNOT_EVT_FLAG_UNREGISTERED;
 		/* As "last_data" is a union, we need just to set the "biggest" member*/
 		pdata->last_data.val_f.multiplier		= 1;
 		pdata->last_data.val_f.value_int		= 0;
@@ -166,6 +167,7 @@ int8_t knot_thing_register_data_item(uint8_t id, const char *name,
 	// TODO: load flags and limits from persistent storage
 	/* Remove KNOT_EVT_FLAG_UNREGISTERED flag */
 	data_items[pos_id].config.event_flags			= KNOT_EVT_FLAG_NONE;
+	data_items[pos_id].config.notify_flags			= KNOT_EVT_FLAG_NONE;
 	/* As "last_data" is a union, we need just to set the "biggest" member */
 	data_items[pos_id].last_data.val_f.multiplier		= 1;
 	data_items[pos_id].last_data.val_f.value_int			= 0;
@@ -217,7 +219,8 @@ int8_t knot_thing_register_data_item(uint8_t id, const char *name,
 	return 0;
 }
 
-int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
+int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint8_t ntflags,
+							uint16_t time_sec,
 							knot_value_types *lower,
 							knot_value_types *upper)
 {
@@ -238,6 +241,7 @@ int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
 		return -1;
 
 	data_items[pos_id].config.event_flags = evflags;
+	data_items[pos_id].config.notify_flags = ntflags;
 	data_items[pos_id].config.time_sec = time_sec;
 
 	/*
@@ -385,6 +389,12 @@ static int data_item_read(uint8_t id, knot_msg_data *data)
 	default:
 		return -1;
 	}
+	/*
+	 * Do not broadcast if it is a response from a get_data. The client
+	 * requesting the data should verify or receive directly the data.
+	 * Other clients should not be notified.
+	 */
+	data->notify = 0;
 
 	return 0;
 }
@@ -569,6 +579,13 @@ static int verify_events(knot_msg_data *data)
 	// Nothing changed
 	if (comparison == 0)
 		return -1;
+	/*
+	 * Checks if the data should be broadcasted to all listeners or only
+	 * stored in the database.
+	 */
+	data->notify = 0;
+	if(comparison & data_items[evt_sensor_id].config.notify_flags)
+		data->notify = 1;
 
 	return 0;
 }
