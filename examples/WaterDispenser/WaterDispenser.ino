@@ -60,7 +60,7 @@ static float get_weight(byte times)
     return raw_kg;
 }
 
-static int scale_read(int32_t *val_int, int32_t *multiplier)
+static int scale_read(int32_t *val_int, uint32_t val_dec, int32_t *multiplier)
 {
     unsigned long currentMillis;
     int button_value_current =  digitalRead(BUTTON_PIN);
@@ -100,7 +100,7 @@ static int scale_read(int32_t *val_int, int32_t *multiplier)
     return 0;
 }
 
-static int scale_write(int32_t *val_int, int32_t *multiplier)
+static int scale_write(int32_t *val_int, uint32_t val_dec, int32_t *multiplier)
 {
     float new_offset;
 
@@ -118,7 +118,7 @@ void setup(void)
     scale.power_up();
 
     thing.init("KNoTThing");
-    thing.registerIntData(SCALE_NAME, SCALE_ID, KNOT_TYPE_ID_MASS,
+    thing.registerNumberData(SCALE_NAME, SCALE_ID, KNOT_TYPE_ID_MASS,
                     KNOT_UNIT_MASS_G, scale_read, scale_write);
 
     /* Read offset from EEPROM */
