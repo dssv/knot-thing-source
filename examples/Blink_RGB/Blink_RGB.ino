@@ -29,7 +29,7 @@ static int32_t red_led = 0;
 static int32_t green_led = 0;
 static int32_t blue_led = 0;
 
-static int red_read(int32_t *val, int32_t *multiplier)
+static int red_read(int32_t *val, uint32_t val_dec, int32_t *multiplier)
 {
     *val = red_led;
     Serial.print("RED LED: ");
@@ -38,7 +38,7 @@ static int red_read(int32_t *val, int32_t *multiplier)
     return 0;
 }
 
-static int red_write(int32_t *val, int32_t *multiplier)
+static int red_write(int32_t *val, uint32_t val_dec, int32_t *multiplier)
 {
     *val = *val%256;
     red_led = *val;
@@ -50,7 +50,7 @@ static int red_write(int32_t *val, int32_t *multiplier)
     return 0;
 }
 
-static int green_read(int32_t *val, int32_t *multiplier)
+static int green_read(int32_t *val, uint32_t val_dec, int32_t *multiplier)
 {
     *val = green_led;
     Serial.print("GREEN LED: ");
@@ -59,7 +59,7 @@ static int green_read(int32_t *val, int32_t *multiplier)
     return 0;
 }
 
-static int green_write(int32_t *val, int32_t *multiplier)
+static int green_write(int32_t *val, uint32_t val_dec, int32_t *multiplier)
 {
     *val = *val%256;
     green_led = *val;
@@ -71,7 +71,7 @@ static int green_write(int32_t *val, int32_t *multiplier)
     return 0;
 }
 
-static int blue_read(int32_t *val, int32_t *multiplier)
+static int blue_read(int32_t *val, uint32_t val_dec, int32_t *multiplier)
 {
     *val = blue_led;
     Serial.print("BLUE LED: ");
@@ -80,7 +80,7 @@ static int blue_read(int32_t *val, int32_t *multiplier)
     return 0;
 }
 
-static int blue_write(int32_t *val, int32_t *multiplier)
+static int blue_write(int32_t *val, uint32_t val_dec, int32_t *multiplier)
 {
     *val = *val%256;
     green_led = *val;
@@ -102,13 +102,13 @@ void setup()
     /* TODO: Read lamp status from eeprom for reboot cases */
     thing.init("KNoTThing RGB");
 
-    thing.registerIntData(RED_LED_NAME, RED_LED_ID, KNOT_TYPE_ID_LUMINOSITY,
+    thing.registerNumberData(RED_LED_NAME, RED_LED_ID, KNOT_TYPE_ID_LUMINOSITY,
         KNOT_UNIT_LUMINOSITY_LM, red_read, red_write);
 
-    thing.registerIntData(GREEN_LED_NAME, GREEN_LED_ID, KNOT_TYPE_ID_LUMINOSITY,
+    thing.registerNumberData(GREEN_LED_NAME, GREEN_LED_ID, KNOT_TYPE_ID_LUMINOSITY,
         KNOT_UNIT_LUMINOSITY_LM, green_read, green_write);
 
-    thing.registerIntData(BLUE_LED_NAME, BLUE_LED_ID, KNOT_TYPE_ID_LUMINOSITY,
+    thing.registerNumberData(BLUE_LED_NAME, BLUE_LED_ID, KNOT_TYPE_ID_LUMINOSITY,
         KNOT_UNIT_LUMINOSITY_LM, blue_read, blue_write);
     Serial.println("RGB LED KNoT Demo");
 
