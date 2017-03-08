@@ -77,6 +77,7 @@ static void reset_data_items(void)
 		item->unit					= KNOT_UNIT_NOT_APPLICABLE;
 		item->value_type				= KNOT_VALUE_TYPE_INVALID;
 		item->config.event_flags			= KNOT_EVT_FLAG_UNREGISTERED;
+		item->config.notify_flags		
 		/* As "last_data" is a union, we need just to set the "biggest" member*/
 		item->last_data.val_f.multiplier		= 1;
 		item->last_data.val_f.value_int		= 0;
@@ -166,6 +167,7 @@ int8_t knot_thing_register_data_item(uint8_t id, const char *name,
 	// TODO: load flags and limits from persistent storage
 	/* Remove KNOT_EVT_FLAG_UNREGISTERED flag */
 	item->config.event_flags			= KNOT_EVT_FLAG_NONE;
+	item->config.notify_flags			= KNOT_EVT_FLAG_NONE;
 	/* As "last_data" is a union, we need just to set the "biggest" member */
 	item->last_data.val_f.multiplier		= 1;
 	item->last_data.val_f.value_int			= 0;
@@ -186,7 +188,8 @@ int8_t knot_thing_register_data_item(uint8_t id, const char *name,
 	return 0;
 }
 
-int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
+int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint8_t ntflags,
+							uint16_t time_sec,
 							knot_value_types *lower,
 							knot_value_types *upper)
 {
@@ -197,6 +200,7 @@ int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
 		return -1;
 
 	item->config.event_flags = evflags;
+	item->config.notify_flags = ntflags;	
 	item->config.time_sec = time_sec;
 
 	/*
@@ -240,9 +244,11 @@ int knot_thing_create_schema(uint8_t id, knot_msg_schema *msg)
 	msg->hdr.payload_len = sizeof(entry.values) + sizeof(entry.sensor_id);
 
 	memcpy(&msg->values, &entry.values, sizeof(msg->values));
-
-	/* Send 'end' for the last item (sensor or actuator). */
-	if (data_items[last_item].id == id)
+	/*
+	 * Every time a data item is registered we must update the max
+	 * number of sensor_id so we know when schema ends;
+	 */
+	if (i == last_id)
 		msg->hdr.type = KNOT_MSG_SCHEMA_END;
 
 	return KNOT_SUCCESS;
@@ -311,6 +317,12 @@ static int data_item_read(uint8_t id, knot_msg_data *data)
 	default:
 		return -1;
 	}
+	/*
+	 * Do not broadcast if it is a response from a get_data. The client
+	 * requesting the data should verify or receive directly the data.
+	 * Other clients should not be notified.
+	 */
+	data->notify = 0;
 
 	return 0;
 }
@@ -492,6 +504,13 @@ none:
 	/* Nothing changed */
 	if (comparison == 0)
 		return -1;
+	/*
+	 * Checks if the data should be broadcasted to all listeners or only
+	 * stored in the database.
+	 */
+	data->notify = 0;
+	if(comparison & item->config.notify_flags)
+		data->notify = 1;
 
 	return 0;
 }
