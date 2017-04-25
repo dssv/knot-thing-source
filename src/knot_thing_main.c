@@ -221,6 +221,7 @@ int8_t knot_thing_register_data_item(uint8_t id, const char *name,
 	if (i == (config_len / CONFIG_SIZE_UNITY)) {
 
 		/* Remove KNOT_EVT_FLAG_UNREGISTERED flag */
+		/* Setting the default config as KNOT_EVT_FLAG_CHANGE */
 		item->config.event_flags			= KNOT_EVT_FLAG_CHANGE;
 		/* As "lower_limit" is a union, we need just to set the "biggest" member */
 		item->config.lower_limit.val_f.multiplier	= 1;
@@ -267,12 +268,18 @@ int knot_thing_config_data_item(uint8_t id, uint8_t evflags, uint16_t time_sec,
 {
 	struct _data_items *item = find_item(id);
 
+	int config_is_valid;
 	uint16_t i;
 	ssize_t config_len;
 	size_t data_config_store_len = sizeof(data_config_store);
 	uint8_t number_of_configs;
 
-	/* FIXME: Check if config is valid */
+	/*Check if config is valid */
+	config_is_valid = knot_config_is_valid(evflags, time_sec, lower, upper);
+
+	if (config_is_valid < 0)
+		return config_is_valid;
+
 	if (!item)
 		return -1;
 
@@ -360,6 +367,12 @@ int knot_thing_create_schema(uint8_t id, knot_msg_schema *msg)
 	/* Send 'end' for the last item (sensor or actuator). */
 	if (data_items[last_item].id == id)
 		msg->hdr.type = KNOT_MSG_SCHEMA_END;
+
+
+	/*
+	 * TODO: Create a function that allows the user to define the
+	 * default config.
+	 */
 
 	return KNOT_SUCCESS;
 }
