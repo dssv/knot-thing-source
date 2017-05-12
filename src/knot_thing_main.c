@@ -446,7 +446,7 @@ static int data_item_read(uint8_t id, knot_msg_data *data)
 
 static int data_item_write(uint8_t id, knot_msg_data *data)
 {
-	int8_t ret_val;
+	int8_t ret_val = 1;
 	uint8_t len;
 	struct _data_items *item;
 
